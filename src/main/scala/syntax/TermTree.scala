@@ -46,6 +46,11 @@ object TermTree:
       condition: Syntax[TermTree], success: Syntax[TermTree], failure: Syntax[TermTree]
   ) extends TermTree
 
+  /** A `let` binding. */
+  case class Binding(
+      name: Syntax[TermTree.Variable], initializer: Syntax[TermTree], body: Syntax[TermTree]
+  ) extends TermTree
+
   /** A recursive term abstraction. */
   case class RecursiveAbstraction(
       name: Syntax[TermTree.Variable], ascription: Syntax[TypeTree], definition: Syntax[TermTree]

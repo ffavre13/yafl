@@ -117,6 +117,11 @@ object Typer:
             throw Diagnostic.typeMismatch(u, Type.Ground.Bool, e.condition.span)
         }
 
+      case e: TermTree.Binding =>
+        typeOf(e.initializer, gamma).and { (t) =>
+          typeOf(e.body, gamma.introducing(e.name.value, t))
+        }
+
       case e: TermTree.RecursiveAbstraction =>
         typeOf(e.ascription, gamma) match
           case t: Type.Arrow =>

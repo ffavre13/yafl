@@ -60,6 +60,7 @@ simple-term ::=
   | term-abstraction
   | type-abstraction
   | conditional
+  | binding
   | '(' term ')'
 
 unit-literal ::=
@@ -78,6 +79,9 @@ type-abstraction ::=
 
 conditional ::=
   | 'if' term 'then' term 'else' term
+
+binding ::=
+  | 'let' identifier '=' term ';' term
 
 type ::=
   | identifier
