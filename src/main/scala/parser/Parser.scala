@@ -95,6 +95,9 @@ object Parser:
       case Some(Token.integer) => integerLiteral
       case Some(Token.identifier) => termIdentifier
       case Some(Token.leftParenthesis) => lambdaOrParenthesized
+      case Some(Token.`if`) => conditional
+      case Some(Token.let) => binding
+      case Some(Token.leftBracket) => typeAbstraction
       case _ => throw expected("term")
 
   /** Parses a Boolean literal. */
@@ -152,6 +155,55 @@ object Parser:
                 // `parameterOrTerm` is just a term; parse the closing parenthesis.
                 take(Token.rightParenthesis, "')'").map((_) => parameterOrTerm)
           }
+    }
+
+  /** Parses a conditional. */
+  private def conditional(using Context): Result[Syntax[TermTree.Conditional]] =
+    take(Token.`if`, "'if'").and { (ifToken) =>
+      term.and { (condition) =>
+        take(Token.`then`, "'then'").and { (thenToken) =>
+          term.and { (success) =>
+            take(Token.`else`, "'else'").and { (elseToken) =>
+              term.map { (failure) =>
+                val s = ifToken.span.extendedToCover(failure.span)
+                Syntax(TermTree.Conditional(condition, success, failure), s)
+              }
+            }
+          }
+        }
+      }
+    }
+
+  /** Parses a let binding. */
+  private def binding(using Context): Result[Syntax[TermTree.Binding]] =
+    take(Token.let, "'let'").and { (letToken) =>
+      termIdentifier.and { (name) =>
+        take(Token.equal, "'='").and { (equalToken) =>
+          term.and { (value) =>
+            take(Token.semicolon, "';'").and { (semicolonToken) =>
+              term.map { (body) =>
+                val s = letToken.span.extendedToCover(body.span)
+                Syntax(TermTree.Binding(name, value, body), s)
+              }
+            }
+          }
+        }
+      }
+    }
+
+  /** Parses a type abstraction. */
+  private def typeAbstraction(using Context): Result[Syntax[TermTree.TypeAbstraction]] =
+    take(Token.leftBracket, "'['").and { (leftBracketToken) =>
+      typeIdentifier.and { (typeIdentifierToken) =>
+        take(Token.rightBracket, "']'").and { (rightBracketToken) =>
+          take(Token.thickArrow, "'=>'").and { (arrowToken) =>
+            term.map { (body) =>
+              val s = leftBracketToken.span.extendedToCover(body.span)
+              Syntax(TermTree.TypeAbstraction(typeIdentifierToken, body), s)
+            }
+          }
+        }
+      }
     }
 
   /** The name of a parameter and its ascription. */
