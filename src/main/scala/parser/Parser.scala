@@ -82,16 +82,19 @@ object Parser:
 
   /** Parses a simple term of the application of a prefix operator. */
   private def prefixTerm(using Context): Result[Syntax[TermTree]] =
-    peek match
-      case Some(t) if t.tag == Token.operator && (t.text == "!" || t.text == "-") => 
-        take(Token.operator, "operator").and { (operatorToken) =>
-          prefixTerm.map { (term) =>
-            val s = op.span.extendedToCover(term.span)
-            Syntax(TermTree.TermApplication(Syntax(TermTree.Variable(s"prefix${operatorToken.text}"), operatorToken.span), term), s)
-          }
-        }
+    peek.map((t) => t.tag) match
+      case Some(Token.operator) => prefixOperator
       case _ => typeApplication
   
+
+  /** Parses a prefix operator. */
+  private def prefixOperator(using Context): Result[Syntax[TermTree]] =
+    take(Token.operator, "operator").and { (operatorToken) =>
+      prefixTerm.map { (term) =>
+        val s = operatorToken.span.extendedToCover(term.span)
+        Syntax(TermTree.TermApplication(Syntax(TermTree.Variable(s"prefix${operatorToken.text}"), operatorToken.span), term), s)
+      }
+    }
 
   /** Parses a simple term or a type application. */
   private def typeApplication(using Context): Result[Syntax[TermTree]] =
@@ -240,12 +243,28 @@ object Parser:
   private def simpleType(using Context): Result[Syntax[TypeTree]] =
     peek.map((t) => t.tag) match
       case Some(Token.identifier) => typeIdentifier
+      case Some(Token.leftBracket) => forAllType
       case _ => throw expected("type")
 
   /** Parses a type identifier. */
   private def typeIdentifier(using Context): Result[Syntax[TypeTree.Variable]] =
     take(Token.identifier, "identifier")
       .map((n) => Syntax(TypeTree.Variable(n.text.toString), n.span))
+
+  /** Parses a universal type. */
+  private def forAllType(using Context): Result[Syntax[TypeTree]] =
+    take(Token.leftBracket, "'['").and { (leftBracketToken) =>
+      typeIdentifier.and { (parameter) =>
+        take(Token.rightBracket, "']'").and { (rightBracketToken) =>
+          take(Token.thickArrow, "'=>'").and { (arrowToken) =>
+            typ3.map { (body) =>
+              val s = leftBracketToken.span.extendedToCover(body.span)
+              Syntax(TypeTree.ForAll(parameter, body), s)
+            }
+          }
+        }
+      }
+    }
 
   /** Returns the next token in `source`, if any. */
   private def peek(using Context): Option[Token] =
