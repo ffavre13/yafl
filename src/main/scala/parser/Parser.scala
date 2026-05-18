@@ -82,7 +82,16 @@ object Parser:
 
   /** Parses a simple term of the application of a prefix operator. */
   private def prefixTerm(using Context): Result[Syntax[TermTree]] =
-    typeApplication
+    peek match
+      case Some(t) if t.tag == Token.operator && (t.text == "!" || t.text == "-") => 
+        take(Token.operator, "operator").and { (operatorToken) =>
+          prefixTerm.map { (term) =>
+            val s = op.span.extendedToCover(term.span)
+            Syntax(TermTree.TermApplication(Syntax(TermTree.Variable(s"prefix${operatorToken.text}"), operatorToken.span), term), s)
+          }
+        }
+      case _ => typeApplication
+  
 
   /** Parses a simple term or a type application. */
   private def typeApplication(using Context): Result[Syntax[TermTree]] =
@@ -205,6 +214,8 @@ object Parser:
         }
       }
     }
+
+
 
   /** The name of a parameter and its ascription. */
   private type Parameter = (Syntax[TermTree.Variable], Syntax[TypeTree])

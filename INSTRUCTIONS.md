@@ -114,7 +114,7 @@ All tasks have an associated test that you can use to exercise your implementati
 
   Although the grammar specifies that more than one type parameter may be supplied, you can implement this step assuming that all type abstractions have exactly one parameter.
 
-- [ ] **Prefix terms** (required)
+- [x] **Prefix terms** (required)
 
   Prefix terms have the form `f e`, where `f` is an operator, meaning that the occurrence of an operator at the start of a term signals the presence of a prefix term.
   In other words, the parser can apply a similar strategy as the one used for simple terms, with two caveats.
