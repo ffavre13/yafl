@@ -98,7 +98,25 @@ object Parser:
 
   /** Parses a simple term or a type application. */
   private def typeApplication(using Context): Result[Syntax[TermTree]] =
-    simpleTerm
+    simpleTerm.and { (simpleTermToken) =>
+      peek.map((t) => t.tag) match
+        case Some(Token.leftBracket) => typeApplicationBracket(simpleTermToken)
+        case _ => result(simpleTermToken)
+    }
+
+  /** Parses a type application */
+  private def typeApplicationBracket(using Context)(abstraction: Syntax[TermTree]): Result[Syntax[TermTree]] =
+    take(Token.leftBracket, "'['").and { (leftBracketToken) =>
+      typ3.and { (argument) =>
+        take(Token.rightBracket, "']'").and { (rightBracketToken) =>
+          val s = abstraction.span.extendedToCover(rightBracketToken.span)
+          val node = Syntax(TermTree.TypeApplication(abstraction, argument), s)
+          peek.map((t) => t.tag) match
+            case Some(Token.leftBracket) => typeApplicationBracket(node)
+            case _ => result(node)
+        }
+      }
+    }
 
   /** Parses a simple term. */
   private def simpleTerm(using Context): Result[Syntax[TermTree]] =
@@ -110,6 +128,7 @@ object Parser:
       case Some(Token.`if`) => conditional
       case Some(Token.let) => binding
       case Some(Token.leftBracket) => typeAbstraction
+      case Some(Token.fix) => recursiveAbstraction
       case _ => throw expected("term")
 
   /** Parses a Boolean literal. */
@@ -218,6 +237,23 @@ object Parser:
       }
     }
 
+  /** Parses a recursive abstraction. */
+  private def recursiveAbstraction(using Context): Result[Syntax[TermTree.RecursiveAbstraction]] =
+    take(Token.fix, "'fix'").and { (fixToken) =>
+      termIdentifier.and { (name) =>
+        take(Token.colon, "':'").and { (colonToken) =>
+          typ3.and { (ascription) =>
+            take(Token.equal, "'='").and { (equalToken) =>
+              term.map { (definition) =>
+                val s = fixToken.span.extendedToCover(definition.span)
+                Syntax(TermTree.RecursiveAbstraction(name, ascription, definition), s)
+              }
+            }
+          }
+        }
+      }
+    }
+
 
 
   /** The name of a parameter and its ascription. */
@@ -237,13 +273,27 @@ object Parser:
 
   /** Parses a type. */
   private def typ3(using Context): Result[Syntax[TypeTree]] =
-    simpleType
+    simpleType.and { (typeToken) =>
+      peek.map((t) => t.tag) match
+        case Some(Token.thinArrow) => arrowType(typeToken)
+        case _ => result(typeToken)
+    }
 
-  /** Parses a simple type. */
+  /** Parses an arrow type. */
+  private def arrowType(using Context)(domain: Syntax[TypeTree]): Result[Syntax[TypeTree.Arrow]] =
+    take(Token.thinArrow, "'->'").and { (arrowToken) =>
+      typ3.map { (codomain) =>
+        val s = domain.span.extendedToCover(codomain.span)
+        Syntax(TypeTree.Arrow(domain, codomain), s)
+      }
+    }
+
+  /** Parses a simple type. */  
   private def simpleType(using Context): Result[Syntax[TypeTree]] =
     peek.map((t) => t.tag) match
       case Some(Token.identifier) => typeIdentifier
       case Some(Token.leftBracket) => forAllType
+      case Some(Token.leftParenthesis) => parenthesizedType
       case _ => throw expected("type")
 
   /** Parses a type identifier. */
@@ -262,6 +312,17 @@ object Parser:
               Syntax(TypeTree.ForAll(parameter, body), s)
             }
           }
+        }
+      }
+    }
+
+  /** Parses a parenthesized type. */
+  private def parenthesizedType(using Context): Result[Syntax[TypeTree]] =
+    take(Token.leftParenthesis, "'('").and { (leftParenthesisToken) =>
+      typ3.and { (t) =>
+        take(Token.rightParenthesis, "')'").map { (rightParenthesisToken) =>
+          val s = leftParenthesisToken.span.extendedToCover(rightParenthesisToken.span)
+          Syntax(t.value, s)
         }
       }
     }
