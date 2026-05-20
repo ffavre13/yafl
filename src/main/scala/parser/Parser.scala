@@ -97,26 +97,28 @@ object Parser:
     }
 
   /** Parses a simple term or a type application. */
-  private def typeApplication(using Context): Result[Syntax[TermTree]] =
-    simpleTerm.and { (simpleTermToken) =>
-      peek.map((t) => t.tag) match
-        case Some(Token.leftBracket) => typeApplicationBracket(simpleTermToken)
-        case _ => result(simpleTermToken)
-    }
-
-  /** Parses a type application */
-  private def typeApplicationBracket(using Context)(abstraction: Syntax[TermTree]): Result[Syntax[TermTree]] =
-    take(Token.leftBracket, "'['").and { (leftBracketToken) =>
-      typ3.and { (argument) =>
-        take(Token.rightBracket, "']'").and { (rightBracketToken) =>
-          val s = abstraction.span.extendedToCover(rightBracketToken.span)
-          val node = Syntax(TermTree.TypeApplication(abstraction, argument), s)
-          peek.map((t) => t.tag) match
-            case Some(Token.leftBracket) => typeApplicationBracket(node)
-            case _ => result(node)
+  private def typeApplication(using Context): Result[Syntax[TermTree]] = {
+    /** lopp for type application */
+    def loop(using Context)(abstraction: Syntax[TermTree]): Result[Syntax[TermTree]] = {
+      take(Token.leftBracket, "'['").and { (leftBracketToken) =>
+        typ3.and { (argument) =>
+          take(Token.rightBracket, "']'").and { (rightBracketToken) =>
+            val s = abstraction.span.extendedToCover(rightBracketToken.span)
+            val node = Syntax(TermTree.TypeApplication(abstraction, argument), s)
+            peek.map((t) => t.tag) match
+              case Some(Token.leftBracket) => loop(node)
+              case _ => result(node)
+          }
         }
       }
     }
+
+    simpleTerm.and { (simpleTermToken) =>
+      peek.map((t) => t.tag) match
+        case Some(Token.leftBracket) => loop(simpleTermToken)
+        case _ => result(simpleTermToken)
+    }
+  }
 
   /** Parses a simple term. */
   private def simpleTerm(using Context): Result[Syntax[TermTree]] =
