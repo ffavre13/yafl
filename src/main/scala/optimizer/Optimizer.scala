@@ -2,6 +2,7 @@ package yafl.optimizer
 
 import yafl.syntax.{InfixOperator, Syntax, TermTree}
 import yafl.typer.{Type, TypedProgram}
+import yafl.syntax.TermTree.BooleanLiteral
 
 object Optimizer:
 
@@ -42,10 +43,42 @@ object Optimizer:
     import TermTree.TermApplication as F
     tree.value match
       case F(Syntax(F(InfixOperator(f), IntegerConstant(lhs)), _), IntegerConstant(rhs)) =>
-        val n = f match
-          case InfixOperator.Add => lhs + rhs
-          case InfixOperator.Sub => lhs - rhs
-        Some(Syntax(TermTree.IntegerLiteral(n), tree.span))
+        f match
+          case InfixOperator.Add | InfixOperator.Div | InfixOperator.Mul | InfixOperator.Div =>
+            
+            val n = f match
+              case InfixOperator.Add => lhs + rhs
+              case InfixOperator.Sub => lhs - rhs
+
+              case InfixOperator.Mul => lhs * rhs
+              case InfixOperator.Div => lhs / rhs
+              case _ => 0
+
+            Some(Syntax(TermTree.IntegerLiteral(n), tree.span))
+          case _ =>
+                      
+            val n = f match
+              case InfixOperator.Eq => lhs == rhs
+              case InfixOperator.Lte => lhs <= rhs
+              case InfixOperator.Gte => lhs >= rhs
+              case InfixOperator.Neq => lhs != rhs
+              case InfixOperator.Lt => lhs < rhs
+              case InfixOperator.Gt => lhs > rhs
+              case _ => false
+              
+            Some(Syntax(TermTree.BooleanLiteral(n), tree.span))
+      
+      case F(Syntax(F(InfixOperator(f), Syntax(BooleanLiteral(lhs),_)), _), Syntax(BooleanLiteral(rhs),_)) =>
+        f match
+          case InfixOperator.Eq | InfixOperator.Neq =>
+            val n = f match
+              case InfixOperator.Eq => lhs == rhs
+              case InfixOperator.Neq => lhs != rhs
+              case _ => false
+
+            Some(Syntax(TermTree.BooleanLiteral(n), tree.span))
+
+          case _ => None
       case _ => None
 
 end Optimizer
