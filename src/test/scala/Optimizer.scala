@@ -11,6 +11,16 @@ final class OptimizerTests extends munit.FunSuite:
     val optimized = optimize("1 + 2 + 3")
     (optimized.syntax.value : @unchecked) match
       case TermTree.IntegerLiteral(6) => ()
+  
+  test("Boolean constant folding"):
+    val optimized = optimize("1 >= 2")
+    (optimized.syntax.value : @unchecked) match
+      case TermTree.BooleanLiteral(false) => ()
+
+  test("Boolean constant folding2"):
+    val optimized = optimize("true && true")
+    (optimized.syntax.value : @unchecked) match
+      case TermTree.BooleanLiteral(true) => ()
 
   test("normalization"):
     import TermTree.TermApplication as F
