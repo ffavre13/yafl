@@ -102,12 +102,16 @@ object Parser:
     def loop(using Context)(abstraction: Syntax[TermTree]): Result[Syntax[TermTree]] = {
       take(Token.leftBracket, "'['").and { (leftBracketToken) =>
         typ3.and { (argument) =>
-          take(Token.rightBracket, "']'").and { (rightBracketToken) =>
-            val s = abstraction.span.extendedToCover(rightBracketToken.span)
-            val node = Syntax(TermTree.TypeApplication(abstraction, argument), s)
-            peek.map((t) => t.tag) match
-              case Some(Token.leftBracket) => loop(node)
-              case _ => result(node)
+          trailingTypeArguments(List(argument)).and { (allArguments) =>
+            take(Token.rightBracket, "']'").and { (rightBracketToken) =>
+              val node = allArguments.foldLeft(abstraction) { (ab, arg) =>
+                val s = ab.span.extendedToCover(arg.span)
+                Syntax(TermTree.TypeApplication(ab, arg), s)
+              }
+              peek.map((t) => t.tag) match
+                case Some(Token.leftBracket) => loop(node)
+                case _ => result(node)
+            }
           }
         }
       }
@@ -225,14 +229,18 @@ object Parser:
     }
 
   /** Parses a type abstraction. */
-  private def typeAbstraction(using Context): Result[Syntax[TermTree.TypeAbstraction]] =
+  private def typeAbstraction(using Context): Result[Syntax[TermTree]] =
     take(Token.leftBracket, "'['").and { (leftBracketToken) =>
       typeIdentifier.and { (typeIdentifierToken) =>
-        take(Token.rightBracket, "']'").and { (rightBracketToken) =>
-          take(Token.thickArrow, "'=>'").and { (arrowToken) =>
-            term.map { (body) =>
-              val s = leftBracketToken.span.extendedToCover(body.span)
-              Syntax(TermTree.TypeAbstraction(typeIdentifierToken, body), s)
+        trailingTypeParameters(List(typeIdentifierToken)).and { (allParameters) =>
+          take(Token.rightBracket, "']'").and { (rightBracketToken) =>
+            take(Token.thickArrow, "'=>'").and { (arrowToken) =>
+              term.map { (body) =>
+                allParameters.foldLeft(body) { (b, p) =>
+                  val s = p.span.extendedToCover(b.span)
+                  Syntax(TermTree.TypeAbstraction(p, b), s)
+                }
+              }
             }
           }
         }
@@ -273,6 +281,25 @@ object Parser:
           .and(p => trailingTermParameters(p :: ps))
       case _ => result(ps)
 
+  /** Parses a (possibly empty) list of type parameters, each prefixed by a leading comma. */
+  private def trailingTypeParameters(
+      ps: List[Syntax[TypeTree.Variable]]
+  )(using Context): Result[List[Syntax[TypeTree.Variable]]] =
+    takeIf(Token.hasTag(Token.comma)) match
+      case Some(separator) =>
+        typeIdentifier(using separator.state)
+          .and(p => trailingTypeParameters(p :: ps))
+      case _ => result(ps)
+
+  private def trailingTypeArguments(
+      ps: List[Syntax[TypeTree]]
+  )(using Context): Result[List[Syntax[TypeTree]]] =
+    takeIf(Token.hasTag(Token.comma)) match
+      case Some(separator) =>
+        typ3(using separator.state)
+          .and(p => trailingTypeArguments(ps :+ p))
+      case _ => result(ps)
+
   /** Parses a type. */
   private def typ3(using Context): Result[Syntax[TypeTree]] =
     simpleType.and { (typeToken) =>
@@ -307,11 +334,15 @@ object Parser:
   private def forAllType(using Context): Result[Syntax[TypeTree]] =
     take(Token.leftBracket, "'['").and { (leftBracketToken) =>
       typeIdentifier.and { (parameter) =>
-        take(Token.rightBracket, "']'").and { (rightBracketToken) =>
-          take(Token.thickArrow, "'=>'").and { (arrowToken) =>
-            typ3.map { (body) =>
-              val s = leftBracketToken.span.extendedToCover(body.span)
-              Syntax(TypeTree.ForAll(parameter, body), s)
+        trailingTypeParameters(List(parameter)).and { (allParameters) =>
+          take(Token.rightBracket, "']'").and { (rightBracketToken) =>
+            take(Token.thickArrow, "'=>'").and { (arrowToken) =>
+              typ3.map { (body) =>
+                allParameters.foldLeft(body) { (b, p) =>
+                  val s = p.span.extendedToCover(b.span)
+                  Syntax(TypeTree.ForAll(p, b), s)
+                }
+              }
             }
           }
         }
