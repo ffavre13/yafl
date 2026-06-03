@@ -70,10 +70,10 @@ object Optimizer:
       
       case F(Syntax(F(InfixOperator(f), Syntax(BooleanLiteral(lhs),_)), _), Syntax(BooleanLiteral(rhs),_)) =>
         f match
-          case InfixOperator.Eq | InfixOperator.Neq =>
+          case InfixOperator.And | InfixOperator.Or =>
             val n = f match
-              case InfixOperator.Eq => lhs == rhs
-              case InfixOperator.Neq => lhs != rhs
+              case InfixOperator.And => lhs && rhs
+              case InfixOperator.Or => lhs || rhs
               case _ => false
 
             Some(Syntax(TermTree.BooleanLiteral(n), tree.span))

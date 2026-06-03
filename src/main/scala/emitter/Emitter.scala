@@ -87,6 +87,8 @@ object Emitter:
               case InfixOperator.Neq => "(i32.Neq)"
               case InfixOperator.Lt => "(i32.Lt)"
               case InfixOperator.Gt => "(i32.Gt)"
+              case InfixOperator.And => "(i32.and)"
+              case InfixOperator.Or => "(i32.or)"
 
             lhs ++ rhs ++ operation
           })
