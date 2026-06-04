@@ -9,16 +9,19 @@ object Emitter:
   /** The context in which code generation is taking place.
     *
     * @param types A map from a term to its type.
-    * @param functions The functions that have been compiled so far.
+    * @param functions A map from a function name to its type and the code of its body.
+    * @param variablesNames A map from a variable name in yafl to its name in WebAssembly
+    * @param counter A counter used to generate different names for each variable.
+    * @param declarations A List of variable to declare at the beginning of the main function.
     */
-  case class Context(types: Map[Syntax[TermTree], Type])
+  case class Context(types: Map[Syntax[TermTree], Type], variablesNames: Map[String, String], counter: Int, declarations: List[String])
 
   /** The result of generating the code of an expression. */
   type Result[+T] = yafl.Result[T, Context]
 
   /** Returns code of `program`. */
   def emit(program: TypedProgram): String =
-    val main = emitMain(program.syntax)(using Context(program.types))
+    val main = emitMain(program.syntax)(using Context(program.types, Map.empty, 0, List.empty))
     s"(module (memory $$__m 1) ${argc} ${argv} ${main.value})"
 
   /** The code of the built-in `argc` function. */
@@ -48,8 +51,11 @@ object Emitter:
       case u =>
         throw Diagnostic(s"root term should have 'Int', found '${u}'", body.span)
 
-    emitAsValue(body).map { (code) =>
-      Rope(s"(func (export \"main\") (result ${output})") ++ code ++ ")"
+    emitAsValue(body).and { (code) =>
+      // Build the declarations code and put it before the code of the body.
+      val declarations = context.declarations.map(dec => s"(local $$${dec} i32)").foldLeft("")((acc, dec) => acc + dec)
+
+      result(Rope(s"(func (export \"main\") (result ${output})") ++ declarations ++ code ++ ")")
     }
   }
 
@@ -64,7 +70,9 @@ object Emitter:
         n match
           case "#argc" => result(Rope(s"(call $$#argc)"))
           case "#argv" => ???
-          case _ => result(Rope(s"(local.get $$${n})"))
+          case _ => 
+            val variableName = context.variablesNames.getOrElse(n, n)
+            result(Rope(s"(local.get $$${variableName})"))
 
       case TermTree.IntegerLiteral(n) =>
         result(Rope(s"(i32.const ${n})"))
@@ -95,6 +103,22 @@ object Emitter:
 
         case _ =>
           emitAsCallee(callee).and((f) => emitAsValue(a).map((x) => x ++ f))
+
+      case TermTree.Binding(name, value, body) =>
+        // Variable name in WebAssembly
+        val variableName = s"${name.value.name}_${context.counter}"
+
+        // Create a new context where the new yafl variable is mapped to the new WebAssembly variable and the counter is incremented
+        val newContext = context.copy(variablesNames = context.variablesNames + (name.value.name -> variableName), counter = context.counter + 1, declarations = variableName::context.declarations)
+
+        // Emit the value and the body with the new context and combine the results.
+        emitAsValue(value)(using newContext).and((valueCode) =>
+          emitAsValue(body)(using newContext).map((bodyCode) =>
+            valueCode ++
+            Rope(s"(local.set $$${variableName})") ++
+            bodyCode
+          )
+        )
 
       case _ =>
         throw Diagnostic("unsupported term", tree.span)

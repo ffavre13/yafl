@@ -36,6 +36,6 @@
 | Code Generation Tasks | Person(s) |
 | ----- | -------- |
 **Built-in arithmetic and comparison** (optional) | Carolina
-**Bindings** (optional)                           | 
+**Bindings** (optional)                           | Florian
 **Monomorphiation** (optional, hard)              | Not done
 **Closures** (optional, brutal)                   | Not done
