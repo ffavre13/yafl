@@ -28,7 +28,7 @@
 **Normalization** (optional)                          | Julien
 **Dead code elimination** (optional)                  |
 **Constant propagation** (optional)                   |
-**Inlining** (optional)                               |
+**Inlining** (optional)                               | Carolina
 **Common subexpression elimination** (optional, hard) | Not done
 **Loop unrolling** (optional, brutal)                 | Not done
 

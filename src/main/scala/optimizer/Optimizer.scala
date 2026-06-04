@@ -6,17 +6,18 @@ import yafl.syntax.TermTree.BooleanLiteral
 
 object Optimizer:
 
-  /** Returns `program` optimized. */
+  /** Returns `program` optimized.
+   *  Loops until no more changes (optimisations) can be done
+   */
   def optimize(program: TypedProgram): TypedProgram =
     val (optimized, updated) = constantFoldRecursively(program.syntax, program.types)
-    TypedProgram(optimized, updated)
+    val result = TypedProgram(optimized, updated)
+    if optimized == program.syntax then result else optimize(result)
 
   /** Substitutes constant expressions in `tree` with their results, returning a an updated syntax
     * tree along with a map from each term to its type.
     */
-  private def constantFoldRecursively(
-      tree: Syntax[TermTree], types: TypedProgram.TypeAssignments
-  ): (Syntax[TermTree], TypedProgram.TypeAssignments) = {
+  private def constantFoldRecursively(tree: Syntax[TermTree], types: TypedProgram.TypeAssignments): (Syntax[TermTree], TypedProgram.TypeAssignments) = {
     constantFold(tree) match
       case Some(s) =>
         // Constant folding succeeded; return the updated tree.
@@ -29,14 +30,83 @@ object Optimizer:
           val (a, us) = constantFoldRecursively(e.argument, types)
           val updated = Syntax(TermTree.TermApplication(f, a), tree.span)
 
-          // Fold the result if possible.
-          constantFold(updated) match
-            case Some(s) => (s, Map(s -> types(tree)))
-            case _ => (updated, (ts ++ us).updated(updated, types(tree)))
+          // INline first, the fold result if possible
+          reduceApp(updated, types ++ ts ++ us) match
+            case Some(s) => s
+            case _ => constantFold(updated) match
+              case Some(s) => (s, Map(s -> types(tree)))
+              case _ => (updated, ts ++ us + (updated -> types(tree)))
 
         case _ =>
           (tree, Map(tree -> types(tree)))
   }
+
+  /* Substitutes all occurrences of a variable with a given syntax tree :
+    * e.g.: x =2 -> all x replaced by 2 */
+  private def substitute(tree : Syntax[TermTree], name : String, substituteTree : Syntax[TermTree]): Syntax[TermTree] = {
+    tree.value match
+      case TermTree.Variable(n) if n == name => substituteTree
+      case TermTree.TermApplication(f, a) =>
+        Syntax(TermTree.TermApplication(
+          substitute(f, name, substituteTree),
+          substitute(a, name, substituteTree)
+        ), tree.span)
+
+      case TermTree.Variable(_) => tree
+
+      case TermTree.TermAbstraction(parameter, ascription, body) =>
+        if parameter.value.name == name then tree
+        else Syntax(TermTree.TermAbstraction(
+          parameter, ascription, substitute(body, name, substituteTree)
+        ), tree.span)
+
+      case TermTree.Binding(bind_name, value, body) =>
+        val newValue = substitute(value, name, substituteTree)
+        if bind_name.value.name == name then Syntax(TermTree.Binding(bind_name, newValue, body), tree.span)
+        else Syntax(TermTree.Binding(
+            bind_name, newValue, substitute(body, name, substituteTree)
+            ),tree.span)
+
+      case TermTree.RecursiveAbstraction(rec_abstraction_name, ascription, body) =>
+        if rec_abstraction_name.value.name == name then tree
+        else Syntax(TermTree.RecursiveAbstraction(
+          rec_abstraction_name, ascription, substitute(body, name, substituteTree)
+        ), tree.span)
+
+      case TermTree.Conditional(condition, succes_thenBrench, fail_elseBranch) =>
+        Syntax(TermTree.Conditional(
+          substitute(condition, name, substituteTree),
+          substitute(succes_thenBrench, name, substituteTree),
+          substitute(fail_elseBranch, name, substituteTree)
+        ), tree.span)
+
+      case TermTree.TypeAbstraction(parameter, body) =>
+        Syntax(TermTree.TypeAbstraction(
+          parameter, substitute(body, name, substituteTree)
+        ), tree.span)
+
+      case TermTree.TypeApplication(abstraction, argument) =>
+        Syntax(TermTree.TypeApplication(
+          substitute(abstraction, name, substituteTree), argument
+        ), tree.span)
+
+      case _ => tree
+
+  }
+
+
+  /* Check if tree's TermApplication and it's callee is TermAbstraction
+      yes = detected pattern of lambda --> calls substitution and return the reduced tree
+      no = nothing detected: return None
+   */
+  private def reduceApp(tree: Syntax[TermTree], types: TypedProgram.TypeAssignments): Option[(Syntax[TermTree], TypedProgram.TypeAssignments)] ={
+    tree.value match
+      case TermTree.TermApplication(Syntax(TermTree.TermAbstraction(param, _, body), _), argument) =>
+        val reduced = substitute(body, param.value.name, argument)
+        Some((reduced, types + (reduced -> types(tree))))
+      case _ =>
+        None
+    }
 
   /** Returns a literal denoting the result of `tree` iff it represents a constant expression. */
   private def constantFold(tree: Syntax[TermTree]): Option[Syntax[TermTree]] =
