@@ -13,6 +13,9 @@ object Optimizer:
     val (optimized, updated) = constantFoldRecursively(program.syntax, program.types)
     val result = TypedProgram(optimized, updated)
     if optimized == program.syntax then result else optimize(result)
+      // TypedProgram(optimized, updated)
+
+    TypedProgram(normalization(optimized), updated)
 
   /** Substitutes constant expressions in `tree` with their results, returning a an updated syntax
     * tree along with a map from each term to its type.
@@ -150,8 +153,53 @@ object Optimizer:
 
           case _ => None
       case _ => None
+  
+  
+  private def normalization(tree: Syntax[TermTree]): Syntax[TermTree] =
+    import TermTree.TermApplication as F
+    import TermTree.Variable
+    import TermTree.Binding as B
 
-end Optimizer
+    val result = tree.value match
+      case b: B =>
+        Syntax(B(b.name, normalization(b.initializer), normalization(b.body)), tree.span)
+
+      // Remonte le binding coté rhs
+      case F(f, Syntax(b: B, _)) =>
+        val newApp = Syntax(F(f, b.body), tree.span)
+        Syntax(B(b.name, b.initializer, normalization(newApp)), tree.span)
+
+      // Remonte le binding coté lhs
+      case F(Syntax(b: B, _), a) =>
+        val newApp = Syntax(F(b.body, a), tree.span)
+        Syntax(B(b.name, b.initializer, normalization(newApp)), tree.span)
+
+      // c + (c + x) => (c + c) + x (assosiativity) right
+      case F(Syntax(F(Syntax(Variable("infix+"), opSpan), Syntax(F(Syntax(F(Syntax(Variable("infix+"), _), IntegerConstant(c1)), innerSpan), x), _)), outerSpan), IntegerConstant(c2))
+          if IntegerConstant.unapply(x).isEmpty =>
+        val folded  = Syntax(TermTree.IntegerLiteral(c1 + c2), tree.span)
+        val newLeft = Syntax(F(Syntax(Variable("infix+"), opSpan), folded), outerSpan)
+        Syntax(F(newLeft, x), tree.span)
+
+      // c + (x + c) => (c + c) + x (assosiativity) left
+      case F(Syntax(F(Syntax(Variable("infix+"), op1Span), IntegerConstant(c1)), outerSpan), Syntax(F(Syntax(F(Syntax(Variable("infix+"), _), IntegerConstant(c2)), innerSpan), x), _))
+          if IntegerConstant.unapply(x).isEmpty =>
+        val folded  = Syntax(TermTree.IntegerLiteral(c1 + c2), tree.span)
+        val newLeft = Syntax(F(Syntax(Variable("infix+"), op1Span), folded), outerSpan)
+        Syntax(F(newLeft, x), tree.span)
+
+      // x + c => c + x (commutativity)
+      case F(Syntax(F(Syntax(Variable("infix+"), opSpan), lhs), innerSpan), rhs)
+          if IntegerConstant.unapply(lhs).isEmpty && IntegerConstant.unapply(rhs).nonEmpty =>
+        Syntax(F(Syntax(F(Syntax(Variable("infix+"), opSpan), rhs), innerSpan), lhs), tree.span)
+
+      case F(f, a) =>
+        Syntax(F(normalization(f), normalization(a)), tree.span)
+
+      case _ =>
+        tree
+
+    if result != tree then normalization(result) else result
 
 /** A pattern for recognizing integer constants. */
 private object IntegerConstant:
