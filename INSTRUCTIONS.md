@@ -204,7 +204,7 @@ These can be implemented in any order, but note that normalization may help dram
 Most available tests may require the application of more than one optimization to pass.
 Further, all tests rely on the parser behaving correctly.
 
-- [ ] **Normalization** (optional)
+- [x] **Normalization** (optional)
 
   Equivalent programs can come in many shapes.
   For example, `1 + x + 2` computes the same value as `1 + 2 + x`.
@@ -241,7 +241,7 @@ Further, all tests rely on the parser behaving correctly.
   Constant propagation consists of replacing variables denoting a constant by their values.
   For example, `let x = 2 ; x + y` can be rewritten `2 + y`.
 
-- [ ] **Inlining** (optional)
+- [x] **Inlining** (optional)
 
   Inlining consists of applying functions at compile-time.
   More formally, it is done by performing beta-reduction on term applications having a term abstraction for their callee.

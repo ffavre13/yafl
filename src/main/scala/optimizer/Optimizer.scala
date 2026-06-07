@@ -11,11 +11,8 @@ object Optimizer:
    */
   def optimize(program: TypedProgram): TypedProgram =
     val (optimized, updated) = constantFoldRecursively(program.syntax, program.types)
-    val result = TypedProgram(optimized, updated)
+    val result = TypedProgram(normalization(optimized), updated)
     if optimized == program.syntax then result else optimize(result)
-      // TypedProgram(optimized, updated)
-
-    TypedProgram(normalization(optimized), updated)
 
   /** Substitutes constant expressions in `tree` with their results, returning a an updated syntax
     * tree along with a map from each term to its type.
