@@ -10,32 +10,32 @@
 
 # Tasks repartitions
 
-| Parsing Tasks | Person(s)|
-| ----- | -------- |
-**Conditionals and Bindings** (required)          | Florian
-**Type abstractions** (required)                  | Florian
-**Prefix terms** (required)                       | Florian
-**Universal types** (required)                    | Florian
-**Arrow types** (required)                        | Florian
-**Parenthesized types** (required)                | Florian
-**Type applications** (required)                  | Florian
-**Recursive abstractions** (required)             | Florian
-**Multiple parameters and arguments** (optional)  | Florian
+| Parsing Tasks | Person(s)| File name | lines |
+| - | - |  - | - |
+**Conditionals and Bindings** (required)          | Florian Favre | src/main/scala/parser/Parser.scala | 134, 135, 198-212, 215-229 |
+**Type abstractions** (required)                  | Florian Favre | src/main/scala/parser/Parser.scala | 136, 232-248 |
+**Prefix terms** (required)                       | Florian Favre | src/main/scala/parser/Parser.scala | 84-87, 91-97 |
+**Universal types** (required)                    | Florian Favre | src/main/scala/parser/Parser.scala | 324, 334-350 |
+**Arrow types** (required)                        | Florian Favre | src/main/scala/parser/Parser.scala | 304-309, 312-318 |
+**Parenthesized types** (required)                | Florian Favre | src/main/scala/parser/Parser.scala | 325, 353-361 |
+**Type applications** (required)                  | Florian Favre | src/main/scala/parser/Parser.scala | 100-125 |
+**Recursive abstractions** (required)             | Florian Favre | src/main/scala/parser/Parser.scala | 137, 251-265 |
+**Multiple parameters and arguments** (optional)  | Florian Favre | src/main/scala/parser/Parser.scala | 285-301, 334-350, 232-248, 100-125 |
 
 
-| Optimization Tasks | Person(s)|
-| ----- | -------- |
-**Normalization** (optional)                          | Julien
-**Dead code elimination** (optional)                  |
-**Constant propagation** (optional)                   |
-**Inlining** (optional)                               | Carolina
-**Common subexpression elimination** (optional, hard) | Not done
-**Loop unrolling** (optional, brutal)                 | Not done
+| Parsing Tasks | Person(s)| File name | lines |
+| - | - |  - | - |
+**Normalization** (optional)                          | Julien Roduit |  |  |
+**Dead code elimination** (optional)                  | Not done |  |  |
+**Constant propagation** (optional)                   | Carolina Oliveira Ribeiro |  |  |
+**Inlining** (optional)                               | Carolina Oliveira Ribeiro |  |  |
+**Common subexpression elimination** (optional, hard) | Not done |  |  |
+**Loop unrolling** (optional, brutal)                 | Not done |  |  |
 
 
-| Code Generation Tasks | Person(s) |
-| ----- | -------- |
-**Built-in arithmetic and comparison** (optional) | Carolina
-**Bindings** (optional)                           | Florian
-**Monomorphiation** (optional, hard)              | Not done
-**Closures** (optional, brutal)                   | Not done
+| Parsing Tasks | Person(s)| File name | lines |
+| - | - |  - | - |
+**Built-in arithmetic and comparison** (optional) | Carolina Oliveira Ribeiro |  |  |
+**Bindings** (optional)                           | Florian Favre | src/main/scala/emitter/Emitter.scala | 17, 24, 54-59, 73-75, 107-121 |
+**Monomorphiation** (optional, hard)              | Not done |  |  |
+**Closures** (optional, brutal)                   | Not done |  |  |

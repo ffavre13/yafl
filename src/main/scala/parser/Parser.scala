@@ -98,7 +98,7 @@ object Parser:
 
   /** Parses a simple term or a type application. */
   private def typeApplication(using Context): Result[Syntax[TermTree]] = {
-    /** lopp for type application */
+    /** loop for type application */
     def loop(using Context)(abstraction: Syntax[TermTree]): Result[Syntax[TermTree]] = {
       take(Token.leftBracket, "'['").and { (leftBracketToken) =>
         typ3.and { (argument) =>
@@ -290,7 +290,7 @@ object Parser:
         typeIdentifier(using separator.state)
           .and(p => trailingTypeParameters(p :: ps))
       case _ => result(ps)
-
+  /** Parses a (possibly empty) list of type arguments, each prefixed by a leading comma. */
   private def trailingTypeArguments(
       ps: List[Syntax[TypeTree]]
   )(using Context): Result[List[Syntax[TypeTree]]] =
