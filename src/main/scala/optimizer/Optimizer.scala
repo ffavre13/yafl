@@ -198,6 +198,8 @@ object Optimizer:
 
     if result != tree then normalization(result) else result
 
+end Optimizer
+
 /** A pattern for recognizing integer constants. */
 private object IntegerConstant:
 

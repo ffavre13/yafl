@@ -25,7 +25,7 @@
 
 | Parsing Tasks | Person(s)| File name | lines |
 | - | - |  - | - |
-**Normalization** (optional)                          | Julien Roduit |  |  |
+**Normalization** (optional)                          | Julien Roduit | src/main/scala/optimizer/Optimizer.scala | 14, 155-199 |
 **Dead code elimination** (optional)                  | Not done |  |  |
 **Constant propagation** (optional)                   | Carolina Oliveira Ribeiro |  |  |
 **Inlining** (optional)                               | Carolina Oliveira Ribeiro |  |  |
