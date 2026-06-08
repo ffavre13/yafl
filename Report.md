@@ -6,7 +6,7 @@
 
 # Link to our project tag
 
-
+https://github.com/ffavre13/yafl/releases/tag/v1.0
 
 # Tasks repartitions
 
