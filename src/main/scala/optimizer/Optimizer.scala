@@ -41,8 +41,8 @@ object Optimizer:
           (tree, Map(tree -> types(tree)))
   }
 
-  /* Substitutes all occurrences of a variable with a given syntax tree :
-    * e.g.: x =2 -> all x replaced by 2 */
+  /* Substitutes all occurrences of a variable with a given syntax tree : e.g.: x =2 -> all x replaced by 2
+    * AI helped us understand what to do, but we wrote the code ourselves. We just asked for an "in english" explication of what to do, and he gave us the cases we had to treat in english. */
   private def substitute(tree : Syntax[TermTree], name : String, substituteTree : Syntax[TermTree]): Syntax[TermTree] = {
     tree.value match
       case TermTree.Variable(n) if n == name => substituteTree
