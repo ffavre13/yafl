@@ -151,7 +151,8 @@ object Optimizer:
           case _ => None
       case _ => None
   
-  
+  // The normalization function allows to move the constant the most left possible and move the bindings (let) the closest to the root
+  // I used LLM in order of to undetstand the concept
   private def normalization(tree: Syntax[TermTree]): Syntax[TermTree] =
     import TermTree.TermApplication as F
     import TermTree.Variable
@@ -161,12 +162,12 @@ object Optimizer:
       case b: B =>
         Syntax(B(b.name, normalization(b.initializer), normalization(b.body)), tree.span)
 
-      // Remonte le binding coté rhs
+      // Move the binding to the rhs
       case F(f, Syntax(b: B, _)) =>
         val newApp = Syntax(F(f, b.body), tree.span)
         Syntax(B(b.name, b.initializer, normalization(newApp)), tree.span)
 
-      // Remonte le binding coté lhs
+      // Move the binding to the lhs
       case F(Syntax(b: B, _), a) =>
         val newApp = Syntax(F(b.body, a), tree.span)
         Syntax(B(b.name, b.initializer, normalization(newApp)), tree.span)
